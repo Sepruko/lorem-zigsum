@@ -34,6 +34,8 @@ pub fn build(builder: *std.build.Builder) !void {
         const target_bin = builder.addExecutable(std.fmt.comptimePrint("lipsum_{s}_{s}", .{ @tagName(target.cpu_arch.?), @tagName(target.os_tag.?) }), "src/main.zig");
         target_bin.strip = strip_bin;
 
+        target_bin.linkLibC();
+
         target_bin.setBuildMode(bin_mode);
         target_bin.setTarget(target);
 
@@ -42,6 +44,8 @@ pub fn build(builder: *std.build.Builder) !void {
 
     const bin = builder.addExecutable("ipsum", "src/main.zig");
     bin.strip = strip_bin;
+
+    bin.linkLibC();
 
     bin.setBuildMode(bin_mode);
     bin.setTarget(bin_target);
