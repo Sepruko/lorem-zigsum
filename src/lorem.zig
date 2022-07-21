@@ -7,29 +7,25 @@ pub const punctuation_slice = &[_]u8{ '.', ',', ';', ':', '?', '!', '-', '\n' };
 pub const Lorem = struct {
     xosh: std.rand.Xoshiro256,
     random: std.rand.Random,
-    mix: std.rand.SplitMix64,
 
-    pub fn init() Lorem {
-        var xosh = std.rand.Xoshiro256.init(42);
+    pub fn init(seed: u64) Lorem {
+        var xosh = std.rand.DefaultPrng.init(seed);
         return .{
             .xosh = xosh,
             .random = xosh.random(),
-            .mix = std.rand.SplitMix64.init(42),
         };
     }
 
     pub inline fn randomPunctuation(self: *Lorem) u8 {
-        self.xosh.seed(self.mix.next());
-        return punctuation_slice[self.random.uintLessThan(usize, punctuation_slice.len)];
+        return punctuation_slice[self.random.uintLessThanBiased(usize, punctuation_slice.len)];
     }
 
     pub inline fn randomLatin(self: *Lorem) []const u8 {
-        self.xosh.seed(self.mix.next());
-        return latin_slice[self.random.uintLessThan(usize, latin_slice.len)];
+        return latin_slice[self.random.uintLessThanBiased(usize, latin_slice.len)];
     }
 
     /// Generates a number of words, the caller owns the returned memory and must free it.
-    pub inline fn generateLoremIpsum(self: *Lorem, allocator: std.mem.Allocator, words: usize) ![]u8 {
+    pub fn generateLoremIpsum(self: *Lorem, allocator: std.mem.Allocator, words: usize) ![]u8 {
         var list = std.ArrayList([]const u8).init(allocator);
         defer list.deinit();
 
@@ -69,8 +65,6 @@ pub const Lorem = struct {
             }
         }
 
-        var final_lorem = std.mem.join(allocator, "", list.items);
-
-        return final_lorem;
+        return std.mem.join(allocator, "", list.items);
     }
 };

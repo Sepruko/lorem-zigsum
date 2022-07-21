@@ -2,10 +2,8 @@ const std = @import("std");
 const Lorem = @import("/lorem.zig").Lorem;
 
 pub fn main() !u8 {
-    const allocator = std.heap.c_allocator;
     const stdOut = std.io.getStdOut().writer();
     const stdIn = std.io.getStdIn().reader();
-    var lorem = Lorem.init();
 
     stdOut.writeAll("How many words would you like to generate? ") catch unreachable;
 
@@ -25,8 +23,12 @@ pub fn main() !u8 {
         return 1;
     };
 
-    var generated_lorem_ipsum = try lorem.generateLoremIpsum(allocator, amount);
-    defer allocator.free(generated_lorem_ipsum);
+    try std.os.getrandom(read_buf[0..8]);
+    var seed = @bitCast(u64, read_buf[0..8].*);
+    var lorem = Lorem.init(seed);
+
+    var generated_lorem_ipsum = try lorem.generateLoremIpsum(std.heap.c_allocator, amount);
+    defer std.heap.c_allocator.free(generated_lorem_ipsum);
 
     stdOut.writeAll(generated_lorem_ipsum) catch unreachable;
     stdOut.writeAll("\n") catch unreachable;
