@@ -23,8 +23,8 @@ pub fn main() !u8 {
         return 1;
     };
 
-    try std.os.getrandom(read_buf[0..8]);
-    var seed = @bitCast(u64, read_buf[0..8].*);
+    try std.os.getrandom(buf[0..8]);
+    var seed = @bitCast(u64, buf[0..8].*);
     var lorem = Lorem.init(seed);
 
     var generated_lorem_ipsum = try lorem.generateLoremIpsum(std.heap.c_allocator, amount);
