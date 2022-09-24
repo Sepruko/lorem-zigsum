@@ -1,37 +1,42 @@
 const std = @import("std");
 const Lorem = @import("lorem.zig").Lorem;
 
+const help =
+    \\Ziggy Ipsum, a lorem ipsum generator written in Zig.
+    \\
+    \\Usage:
+    \\
+    \\ipsum <number>
+    \\
+;
+
 pub fn main() !u8 {
     const std_out = std.io.getStdOut().writer();
-    const std_in = std.io.getStdIn().reader();
+    const std_err = std.io.getStdErr().writer();
 
-    std_out.writeAll("How many words would you like to generate? ") catch unreachable;
-
-    var buf: [32]u8 = undefined;
-    var read_buf = std_in.readUntilDelimiter(&buf, '\n') catch |err| {
-        if (err == error.StreamTooLong) {
-            std_out.writeAll("Too long of an input.\n") catch unreachable;
-        } else std_out.writeAll("Failed to read into buffer.\n") catch unreachable;
-
+    var args = std.process.argsAlloc(std.heap.c_allocator) catch {
+        std_err.writeAll("Failed to process arguments.\n") catch unreachable;
         return 1;
     };
 
-    if (read_buf[read_buf.len - 1] == '\r') read_buf.len -= 1;
+    if (args.len < 2) {
+        std_err.writeAll(help) catch unreachable;
+        return 1;
+    }
 
-    var amount = std.fmt.parseUnsigned(usize, read_buf, 10) catch {
-        std_out.writeAll("Failed to parse the given number.") catch unreachable;
+    var amount = std.fmt.parseUnsigned(usize, args[1], 10) catch {
+        std_err.writeAll(help) catch unreachable;
         return 1;
     };
 
-    try std.os.getrandom(buf[0..8]);
-    var seed = @bitCast(u64, buf[0..8].*);
-    var lorem = Lorem.init(seed);
+    var buf: [8]u8 = undefined;
+    try std.os.getrandom(&buf);
+    var lorem = Lorem.init(@bitCast(u64, buf));
 
     var generated_lorem_ipsum = try lorem.generateLoremIpsum(std.heap.c_allocator, amount);
     defer std.heap.c_allocator.free(generated_lorem_ipsum);
 
-    std_out.writeAll(generated_lorem_ipsum) catch unreachable;
-    std_out.writeAll("\n") catch unreachable;
+    std_out.print("{s}\n", .{generated_lorem_ipsum}) catch unreachable;
 
     return 0;
 }
