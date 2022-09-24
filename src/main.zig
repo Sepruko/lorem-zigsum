@@ -1,17 +1,17 @@
 const std = @import("std");
-const Lorem = @import("/lorem.zig").Lorem;
+const Lorem = @import("lorem.zig").Lorem;
 
 pub fn main() !u8 {
-    const stdOut = std.io.getStdOut().writer();
-    const stdIn = std.io.getStdIn().reader();
+    const std_out = std.io.getStdOut().writer();
+    const std_in = std.io.getStdIn().reader();
 
-    stdOut.writeAll("How many words would you like to generate? ") catch unreachable;
+    std_out.writeAll("How many words would you like to generate? ") catch unreachable;
 
     var buf: [32]u8 = undefined;
-    var read_buf = stdIn.readUntilDelimiter(&buf, '\n') catch |err| {
+    var read_buf = std_in.readUntilDelimiter(&buf, '\n') catch |err| {
         if (err == error.StreamTooLong) {
-            stdOut.writeAll("Too long of an input.\n") catch unreachable;
-        } else stdOut.writeAll("Failed to read into buffer.\n") catch unreachable;
+            std_out.writeAll("Too long of an input.\n") catch unreachable;
+        } else std_out.writeAll("Failed to read into buffer.\n") catch unreachable;
 
         return 1;
     };
@@ -19,7 +19,7 @@ pub fn main() !u8 {
     if (read_buf[read_buf.len - 1] == '\r') read_buf.len -= 1;
 
     var amount = std.fmt.parseUnsigned(usize, read_buf, 10) catch {
-        stdOut.writeAll("Failed to parse the given number.") catch unreachable;
+        std_out.writeAll("Failed to parse the given number.") catch unreachable;
         return 1;
     };
 
@@ -30,8 +30,8 @@ pub fn main() !u8 {
     var generated_lorem_ipsum = try lorem.generateLoremIpsum(std.heap.c_allocator, amount);
     defer std.heap.c_allocator.free(generated_lorem_ipsum);
 
-    stdOut.writeAll(generated_lorem_ipsum) catch unreachable;
-    stdOut.writeAll("\n") catch unreachable;
+    std_out.writeAll(generated_lorem_ipsum) catch unreachable;
+    std_out.writeAll("\n") catch unreachable;
 
     return 0;
 }
