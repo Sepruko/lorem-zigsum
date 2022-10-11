@@ -1,14 +1,111 @@
 const std = @import("std");
 
-pub const latin_slice = &[_][]const u8{ "lorem", "ipsum", "dolor", "sit", "amet", "consectetuer", "adipiscing", "elit", "nam", "cursus", "morbi", "ut", "mi", "nullam", "enim", "leo", "egestas", "id", "condimentum", "at", "laoreet", "mattis", "massa", "sed", "eleifend", "nonummy", "diam", "praesent", "mauris", "ante", "elementum", "et", "bibendum", "at", "posuere", "sit", "amet", "nibh", "duis", "tincidunt", "lectus", "quis", "dui", "viverra", "vestibulum", "suspendisse", "vulputate", "aliquam", "dui", "nulla", "elementum", "dui", "ut", "augue", "aliquam", "vehicula", "mi", "at", "mauris", "maecenas", "placerat", "nisl", "at", "consequat", "rhoncus", "sem", "nunc", "gravida", "justo", "quis", "eleifend", "arcu", "velit", "quis", "lacus", "morbi", "magna", "magna", "tincidunt", "a", "mattis", "non", "imperdiet", "vitae", "tellus", "sed", "odio", "est", "auctor", "ac", "sollicitudin", "in", "consequat", "vitae", "orci", "fusce", "id", "felis", "vivamus", "sollicitudin", "metus", "eget", "eros" };
+/// A slice of latin words to use.
+pub const latin_words = &[_][]const u8{
+    "a",
+    "ac",
+    "adipiscing",
+    "aliquam",
+    "amet",
+    "ante",
+    "arcu",
+    "at",
+    "auctor",
+    "augue",
+    "bibendum",
+    "condimentum",
+    "consectetuer",
+    "consequat",
+    "cursus",
+    "diam",
+    "dolor",
+    "dui",
+    "duis",
+    "egestas",
+    "eget",
+    "eleifend",
+    "elementum",
+    "elit",
+    "enim",
+    "eros",
+    "est",
+    "et",
+    "felis",
+    "fusce",
+    "gravida",
+    "id",
+    "imperdiet",
+    "in",
+    "ipsum",
+    "justo",
+    "lacus",
+    "laoreet",
+    "lectus",
+    "leo",
+    "lorem",
+    "maecenas",
+    "magna",
+    "massa",
+    "mattis",
+    "mauris",
+    "metus",
+    "mi",
+    "morbi",
+    "nam",
+    "nibh",
+    "nisl",
+    "non",
+    "nonummy",
+    "nulla",
+    "nullam",
+    "nunc",
+    "odio",
+    "orci",
+    "placerat",
+    "posuere",
+    "praesent",
+    "quis",
+    "rhoncus",
+    "sed",
+    "sem",
+    "sit",
+    "sollicitudin",
+    "suspendisse",
+    "tellus",
+    "tincidunt",
+    "ut",
+    "vehicula",
+    "velit",
+    "vestibulum",
+    "vitae",
+    "vivamus",
+    "viverra",
+    "vulputate",
+};
 
-pub const punctuation_slice = &[_]u8{ '.', ',', ';', ':', '?', '!', '-', '\n' };
+/// A slice of punctuation to use.
+pub const punctuation_chars = &[_]u8{
+    '\n',
+    '!',
+    ',',
+    '-',
+    '.',
+    ':',
+    ';',
+    '?',
+};
 
-pub const Lorem = struct {
+/// Generates a string of lorem ipsum.
+pub const LoremIpsumGenerator = struct {
     xosh: std.rand.Xoshiro256,
     random: std.rand.Random,
 
-    pub fn init(seed: u64) Lorem {
+    const Error = error{
+        BufferTooLarge,
+    } || std.mem.Allocator.Error;
+
+    /// Initializes a new instance of `LoremIpsumGenerator` with the given seed.
+    pub fn init(seed: u64) LoremIpsumGenerator {
         var xosh = std.rand.DefaultPrng.init(seed);
         return .{
             .xosh = xosh,
@@ -16,55 +113,97 @@ pub const Lorem = struct {
         };
     }
 
-    pub inline fn randomPunctuation(self: *Lorem) u8 {
-        return punctuation_slice[self.random.uintLessThanBiased(usize, punctuation_slice.len)];
+    /// Returns a random punctuation from `punctuation_chars`.
+    pub inline fn randomPunctuation(self: *LoremIpsumGenerator) u8 {
+        return punctuation_chars[self.random.uintLessThanBiased(usize, punctuation_chars.len)];
     }
 
-    pub inline fn randomLatin(self: *Lorem) []const u8 {
-        return latin_slice[self.random.uintLessThanBiased(usize, latin_slice.len)];
+    /// Returns a random word from `latin_words`.
+    pub inline fn randomLatin(self: *LoremIpsumGenerator) []const u8 {
+        return latin_words[self.random.uintLessThanBiased(usize, latin_words.len)];
     }
 
     /// Generates a number of words, the caller owns the returned memory and must free it.
-    pub fn generateLoremIpsum(self: *Lorem, allocator: std.mem.Allocator, words: usize) ![]u8 {
-        var list = std.ArrayList([]const u8).init(allocator);
-        defer list.deinit();
+    ///
+    /// The force argument is only used if the resulting required allocation size for the inital
+    // buffer is larger than 32 megabytes.
+    pub fn generateLoremIpsum(
+        self: *LoremIpsumGenerator,
+        allocator: std.mem.Allocator,
+        words: usize,
+        force: bool,
+    ) LoremIpsumGenerator.Error![]u8 {
+        // TODO: Consider using a temporary file to write our stuff to if the required size is above
+        // a threshold.
+        //
+        // I would do this *now*, however I cannot be bothered handle temporary files on each target
+        // OS.
 
-        var i: usize = 0;
-        var need_capitalised = true;
-        while (i < words) : (i += 1) {
-            if (@rem(i, 8) == 6) {
-                list.items.len -= 1;
-                var punctuation = self.randomPunctuation();
-                switch (punctuation) {
-                    '-' => try list.append(&[_]u8{punctuation}),
-                    '\n' => {
-                        try list.append(&[_]u8{ '.', punctuation, punctuation });
-                        need_capitalised = true;
+        const required_size = 1024 * (words / 10);
+        if (required_size > 1024 * 32 and !force) return Error.BufferTooLarge;
+
+        var buffer = try allocator.alloc(u8, required_size);
+        defer allocator.free(buffer);
+
+        var fixed_buffer_allocator = std.heap.FixedBufferAllocator.init(buffer);
+        var alloc = fixed_buffer_allocator.allocator();
+
+        var word_and_punctuation_list = std.ArrayList([]const u8).init(allocator);
+        defer word_and_punctuation_list.deinit();
+
+        var current_word_count: usize = 0;
+        var need_capitalized_word = true;
+
+        while (current_word_count < words) : (current_word_count += 1) {
+            // Insert a new punctuation character.
+            if (@rem(current_word_count, 8) == 6) {
+                // De-incremement the items length to correct.
+                word_and_punctuation_list.items.len -= 1;
+
+                switch (self.randomPunctuation()) {
+                    '-' => |ch| {
+                        var item = try alloc.alloc(u8, 1);
+                        item[0] = ch;
+
+                        // The words should be joined.
+                        try word_and_punctuation_list.append(item);
                     },
-                    '.', '?', '!', ':' => {
-                        try list.append(&[_]u8{ punctuation, ' ' });
-                        need_capitalised = true;
+                    '\n' => |ch| {
+                        var item = try alloc.alloc(u8, 3);
+                        item[0] = '.';
+                        item[1] = ch;
+                        item[2] = ch;
+
+                        try word_and_punctuation_list.append(item);
+                        need_capitalized_word = true;
                     },
-                    else => try list.append(&[_]u8{ punctuation, ' ' }),
+                    else => |ch| {
+                        var item = try alloc.alloc(u8, 2);
+                        item[0] = ch;
+                        item[1] = ' ';
+
+                        try word_and_punctuation_list.append(item);
+                        need_capitalized_word = switch (ch) {
+                            '.', '?', '!', ':' => true,
+                            else => false,
+                        };
+                    },
                 }
             }
 
-            if (need_capitalised) {
-                var random_latin = self.randomLatin();
-                try list.appendSlice(&[_][]const u8{
-                    &[_]u8{random_latin[0] - 32},
-                    random_latin[1..],
-                    if (i == words - 1) "." else " ",
-                });
-                need_capitalised = false;
-            } else {
-                try list.appendSlice(&[_][]const u8{
-                    self.randomLatin(),
-                    if (i == words - 1) "." else " ",
-                });
+            var random_latin = try alloc.dupe(u8, self.randomLatin());
+            if (need_capitalized_word) {
+                random_latin[0] -= 32;
+                need_capitalized_word = false;
             }
+
+            var slice = try alloc.alloc([]const u8, 2);
+            slice[0] = random_latin;
+            slice[1] = if (current_word_count == words - 1) "." else " ";
+
+            try word_and_punctuation_list.appendSlice(slice);
         }
 
-        return std.mem.join(allocator, "", list.items);
+        return std.mem.join(allocator, "", word_and_punctuation_list.items);
     }
 };
