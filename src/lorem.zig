@@ -102,6 +102,7 @@ pub const LoremIpsumGenerator = struct {
 
     const Error = error{
         BufferTooLarge,
+        NoWords,
     } || std.mem.Allocator.Error;
 
     /// Initializes a new instance of `LoremIpsumGenerator` with the given seed.
@@ -130,8 +131,8 @@ pub const LoremIpsumGenerator = struct {
     pub fn generateLoremIpsum(
         self: *LoremIpsumGenerator,
         allocator: std.mem.Allocator,
-        words: usize,
-        force: bool,
+        count: usize,
+        max_size: ?usize,
     ) LoremIpsumGenerator.Error![]u8 {
         // TODO: Consider using a temporary file to write our stuff to if the required size is above
         // a threshold.
@@ -139,8 +140,11 @@ pub const LoremIpsumGenerator = struct {
         // I would do this *now*, however I cannot be bothered handle temporary files on each target
         // OS.
 
-        const required_size = 1024 * (words / 10);
-        if (required_size > 1024 * 32 and !force) return Error.BufferTooLarge;
+        if (count == 0) return Error.NoWords;
+
+        const required_size = 1024 * @as(usize, if (count < 10) 1 else count / 10);
+        if (max_size != null and required_size > max_size.?)
+            return Error.BufferTooLarge;
 
         var buffer = try allocator.alloc(u8, required_size);
         defer allocator.free(buffer);
@@ -154,7 +158,7 @@ pub const LoremIpsumGenerator = struct {
         var current_word_count: usize = 0;
         var need_capitalized_word = true;
 
-        while (current_word_count < words) : (current_word_count += 1) {
+        while (current_word_count < count) : (current_word_count += 1) {
             // Insert a new punctuation character.
             if (@rem(current_word_count, 8) == 6) {
                 // De-incremement the items length to correct.
@@ -199,7 +203,7 @@ pub const LoremIpsumGenerator = struct {
 
             var slice = try alloc.alloc([]const u8, 2);
             slice[0] = random_latin;
-            slice[1] = if (current_word_count == words - 1) "." else " ";
+            slice[1] = if (current_word_count == count - 1) "." else " ";
 
             try word_and_punctuation_list.appendSlice(slice);
         }
