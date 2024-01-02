@@ -1,0 +1,21 @@
+{
+	"$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+	"version": "0.2",
+	"name": "lorem-zigsum",
+	"language": "en_US",
+	"description": "cSpell configuration file for the lorem-zigsum repository.",
+	"dictionaries": [
+		"filetypes",
+		"lorem-zigsum",
+		"softwareTerms"
+	],
+	"dictionaryDefinitions": [
+		{
+			"name": "lorem-zigsum",
+			"path": "./.cspell/lorem-zigsum.txt",
+			"addWords": true
+		}
+	],
+	"ignorePaths": ["**/node_modules/", "pnpm-lock.yaml"],
+	"minWordLength": 4
+}

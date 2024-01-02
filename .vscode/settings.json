@@ -1,0 +1,9 @@
+{
+	"[zig]": {
+		"editor.defaultFormatter": "ziglang.vscode-zig"
+	},
+	"editor.defaultFormatter": "esbenp.prettier-vscode",
+	"files.associations": {
+		"**/.cspell/*.txt": "ignore"
+	}
+}
